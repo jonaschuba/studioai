@@ -77,9 +77,22 @@ const sanitizeState = (state: unknown): WallImageState => {
 };
 
 export function WallImageProvider({ children }: { children: React.ReactNode }) {
-    const [images, setImages] = useState<WallImageState>({});
+    const [images, setImages] = useState<WallImageState>(() => {
+        if (typeof window === "undefined") return {};
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw) as WallImageState;
+                return sanitizeState(parsed);
+            } catch {
+                return {};
+            }
+        }
+        return {};
+    });
     const objectUrlsRef = useRef<Set<string>>(new Set());
     const hasHydratedRef = useRef(false);
+    const channelRef = useRef<BroadcastChannel | null>(null);
 
     const trackObjectUrl = useCallback((url: string) => {
         if (url.startsWith("blob:")) {
@@ -154,18 +167,36 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
     );
 
     useEffect(() => {
-        const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-        if (raw) {
+        hasHydratedRef.current = true;
+
+        if (typeof BroadcastChannel !== "undefined") {
+            const channel = new BroadcastChannel(STORAGE_KEY);
+            channelRef.current = channel;
+            channel.onmessage = (event) => {
+                const cleaned = sanitizeState(event.data);
+                setImages(cleaned);
+            };
+        }
+
+        const onStorage = (event: StorageEvent) => {
+            if (event.key !== STORAGE_KEY || !event.newValue) return;
             try {
-                const parsed = JSON.parse(raw) as WallImageState;
+                const parsed = JSON.parse(event.newValue);
                 const cleaned = sanitizeState(parsed);
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setImages(cleaned);
             } catch {
                 // ignore invalid storage
             }
-        }
-        hasHydratedRef.current = true;
+        };
+        window.addEventListener("storage", onStorage);
+
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            if (channelRef.current) {
+                channelRef.current.close();
+                channelRef.current = null;
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -173,6 +204,9 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
         try {
             const cleaned = sanitizeState(images);
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+            if (channelRef.current) {
+                channelRef.current.postMessage(cleaned);
+            }
         } catch {
             // storage write can fail; ignore
         }

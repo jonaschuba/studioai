@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AppChrome from "@/components/AppChrome";
 import SectionContainer from "@/components/SectionContainer";
@@ -15,7 +15,7 @@ const SECTIONS: SectionKey[] = ["START", "DESIGN", "RENDER", "ENGINEERING"];
 const isSectionKey = (value: string): value is SectionKey =>
     SECTIONS.includes(value.toUpperCase() as SectionKey);
 
-export default function Home() {
+function HomeContent() {
     const searchParams = useSearchParams();
     const sectionParam = searchParams.get("section") ?? "";
     const [activeSection, setActiveSection] = useState<SectionKey>(
@@ -48,5 +48,13 @@ export default function Home() {
                 <EngineeringSection />
             </SectionContainer>
         </AppChrome>
+    );
+}
+
+export default function Home() {
+    return (
+        <Suspense fallback={null}>
+            <HomeContent />
+        </Suspense>
     );
 }
