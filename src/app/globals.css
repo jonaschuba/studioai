@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+    --font-display: var(--font-rtl);
+    --font-body: var(--font-rtl);
+}
+
+:root {
+    --background: #000000;
+    --foreground: #ffffff;
+}
+
+body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: var(--font-rtl);
+    overflow: hidden;
+    /* Prevent scrolling */
+}
