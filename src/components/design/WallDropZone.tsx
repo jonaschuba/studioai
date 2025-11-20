@@ -9,8 +9,12 @@ interface WallDropZoneProps {
     width: number;
     height: number;
     imageState?: { src: string; transform: WallTransform };
-    onSelectFile: (wallId: WallId, file: File) => void;
-    onUpdateTransform: (wallId: WallId, partial: Partial<WallTransform>) => void;
+    onSelectFile: (wallId: WallId, file: File, panelSize: { width: number; height: number }) => void;
+    onUpdateTransform: (
+        wallId: WallId,
+        partial: Partial<WallTransform>,
+        panelSize: { width: number; height: number }
+    ) => void;
     onResetTransform: (wallId: WallId) => void;
     onClearImage: (wallId: WallId) => void;
 }
@@ -41,14 +45,16 @@ export default function WallDropZone({
     }, [naturalSize, width, height]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setNaturalSize(null);
-    }, [imageState?.src]);
+        if (!imageState) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setNaturalSize(null);
+        }
+    }, [imageState]);
 
     const handleFiles = (files: FileList | null) => {
         const file = files?.[0];
         if (file) {
-            onSelectFile(wallId, file);
+            onSelectFile(wallId, file, { width, height });
         }
     };
 
@@ -71,10 +77,14 @@ export default function WallDropZone({
             if (!dragStart.current) return;
             const dx = event.clientX - dragStart.current.x;
             const dy = event.clientY - dragStart.current.y;
-            onUpdateTransform(wallId, {
-                x: dragStart.current.originX + dx,
-                y: dragStart.current.originY + dy,
-            });
+            onUpdateTransform(
+                wallId,
+                {
+                    x: dragStart.current.originX + dx,
+                    y: dragStart.current.originY + dy,
+                },
+                { width, height }
+            );
         };
         const handleUp = () => {
             setIsDraggingImage(false);
@@ -86,18 +96,18 @@ export default function WallDropZone({
             window.removeEventListener("mousemove", handleMove);
             window.removeEventListener("mouseup", handleUp);
         };
-    }, [isDraggingImage, onUpdateTransform, wallId]);
+    }, [isDraggingImage, onUpdateTransform, wallId, width, height]);
 
     const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
         if (!imageState) return;
         event.preventDefault();
         if (event.shiftKey) {
             const nextRotation = imageState.transform.rotation + event.deltaY * 0.2;
-            onUpdateTransform(wallId, { rotation: nextRotation });
+            onUpdateTransform(wallId, { rotation: nextRotation }, { width, height });
         } else {
             const deltaScale = event.deltaY * -0.001;
             const nextScale = clamp(imageState.transform.scale + deltaScale, 0.2, 5);
-            onUpdateTransform(wallId, { scale: nextScale });
+            onUpdateTransform(wallId, { scale: nextScale }, { width, height });
         }
     };
 
@@ -151,19 +161,19 @@ export default function WallDropZone({
                 {imageState ? (
                     <>
                         <img
-                            src={imageState.src}
-                            alt="Uploaded visual"
-                            className="absolute"
-                            style={{
-                                top: "50%",
-                                left: "50%",
-                                width: naturalSize?.width ?? width,
-                                height: naturalSize?.height ?? height,
-                                transform: `translate(-50%, -50%) translate(${imageState.transform.x}px, ${imageState.transform.y}px) scale(${baseScale * imageState.transform.scale}) rotate(${imageState.transform.rotation}deg)`,
-                                transformOrigin: "center",
-                                maxWidth: "none",
-                                maxHeight: "none",
-                                willChange: "transform",
+                        src={imageState.src}
+                        alt="Uploaded visual"
+                        className="absolute"
+                        style={{
+                            top: "50%",
+                            left: "50%",
+                            width: naturalSize?.width ?? "auto",
+                            height: naturalSize?.height ?? "auto",
+                            transform: `translate(-50%, -50%) translate(${imageState.transform.x}px, ${imageState.transform.y}px) scale(${baseScale * imageState.transform.scale}) rotate(${imageState.transform.rotation}deg)`,
+                            transformOrigin: "center",
+                            maxWidth: "none",
+                            maxHeight: "none",
+                            willChange: "transform",
                                 pointerEvents: "none",
                             }}
                             onLoad={(event) => {

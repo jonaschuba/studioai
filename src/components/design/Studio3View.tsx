@@ -38,8 +38,12 @@ interface LayoutProps {
     availableWidth: number;
     availableHeight: number;
     images: WallImageState;
-    onSelectFile: (wallId: WallId, file: File) => void;
-    onUpdateTransform: (wallId: WallId, partial: Partial<WallTransform>) => void;
+    onSelectFile: (wallId: WallId, file: File, panelSize: { width: number; height: number }) => void;
+    onUpdateTransform: (
+        wallId: WallId,
+        partial: Partial<WallTransform>,
+        panelSize: { width: number; height: number }
+    ) => void;
     onResetTransform: (wallId: WallId) => void;
     onClearImage: (wallId: WallId) => void;
 }
@@ -48,12 +52,12 @@ export default function Studio3View({ view }: { view: StudioView }) {
     const { images, setImage, updateTransform, resetTransform, clearImage } = useWallImages();
     const { ref, size } = useElementSize<HTMLDivElement>();
 
-    const handleFile = (wallId: WallId, file: File) => {
+    const handleFile = (wallId: WallId, file: File, panelSize: { width: number; height: number }) => {
         const reader = new FileReader();
         reader.onload = () => {
             const result = reader.result;
             if (typeof result === "string") {
-                setImage(wallId, result);
+                setImage(wallId, result, panelSize);
             }
         };
         reader.readAsDataURL(file);
@@ -208,8 +212,12 @@ function WallWithLabel({
     width: number;
     height: number;
     imageState: WallImageState[WallId];
-    onSelectFile: (wallId: WallId, file: File) => void;
-    onUpdateTransform: (wallId: WallId, partial: Partial<WallTransform>) => void;
+    onSelectFile: (wallId: WallId, file: File, panelSize: { width: number; height: number }) => void;
+    onUpdateTransform: (
+        wallId: WallId,
+        partial: Partial<WallTransform>,
+        panelSize: { width: number; height: number }
+    ) => void;
     onResetTransform: (wallId: WallId) => void;
     onClearImage: (wallId: WallId) => void;
 }) {

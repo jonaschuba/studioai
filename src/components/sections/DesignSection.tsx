@@ -35,7 +35,7 @@ export default function DesignSection() {
 
     return (
         <div className="w-full h-full flex flex-col overflow-hidden relative">
-            <div className="flex-1 flex items-center justify-center px-6 pt-10 pb-4 md:px-10 pr-40 md:pr-56">
+            <div className="flex-1 flex items-start justify-center px-6 py-4 md:px-10 pr-40 md:pr-56">
                 <Studio3View view={activeView} />
             </div>
 

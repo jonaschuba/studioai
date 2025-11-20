@@ -46,12 +46,14 @@ function WallLayer({
     wall,
     src,
     transform,
+    refSize,
     containerWidth,
     containerHeight,
 }: {
     wall: WallConfig;
     src?: string;
     transform: WallTransform;
+    refSize?: { width?: number; height?: number };
     containerWidth: number;
     containerHeight: number;
 }) {
@@ -64,11 +66,15 @@ function WallLayer({
 
     const wallPixelWidth = (wall.width / CANVAS.width) * containerWidth;
     const wallPixelHeight = (wall.height / CANVAS.height) * containerHeight;
+    const refWidth = refSize?.width && refSize.width > 0 ? refSize.width : wallPixelWidth;
+    const refHeight = refSize?.height && refSize.height > 0 ? refSize.height : wallPixelHeight;
 
     const baseScale =
         naturalSize && naturalSize.width > 0 && naturalSize.height > 0
             ? Math.max(wallPixelWidth / naturalSize.width, wallPixelHeight / naturalSize.height)
             : 1;
+    const translateScaleX = wallPixelWidth / refWidth;
+    const translateScaleY = wallPixelHeight / refHeight;
 
     return (
         <div
@@ -90,7 +96,7 @@ function WallLayer({
                         left: "50%",
                         width: naturalSize?.width ?? "auto",
                         height: naturalSize?.height ?? "auto",
-                        transform: `translate(-50%, -50%) translate(${transform.x}px, ${transform.y}px) scale(${baseScale * transform.scale}) rotate(${transform.rotation}deg)`,
+                        transform: `translate(-50%, -50%) translate(${transform.x * translateScaleX}px, ${transform.y * translateScaleY}px) scale(${baseScale * transform.scale}) rotate(${transform.rotation}deg)`,
                         transformOrigin: "center",
                         maxWidth: "none",
                         maxHeight: "none",
@@ -119,6 +125,7 @@ export default function RenderW245Page() {
                     wall,
                     src: data?.src,
                     transform: data?.transform ?? baseTransform,
+                    refSize: { width: data?.refWidth, height: data?.refHeight },
                 };
             }),
         [images]
@@ -141,12 +148,13 @@ export default function RenderW245Page() {
                     height: size.height,
                 }}
             >
-                {wallData.map(({ wall, src, transform }) => (
+                {wallData.map(({ wall, src, transform, refSize }) => (
                     <WallLayer
                         key={wall.id}
                         wall={wall}
                         src={src}
                         transform={transform}
+                        refSize={refSize}
                         containerWidth={size.width}
                         containerHeight={size.height}
                     />
