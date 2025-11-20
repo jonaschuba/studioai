@@ -93,6 +93,7 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
     const objectUrlsRef = useRef<Set<string>>(new Set());
     const hasHydratedRef = useRef(false);
     const channelRef = useRef<BroadcastChannel | null>(null);
+    const lastSyncedRef = useRef(0);
 
     const trackObjectUrl = useCallback((url: string) => {
         if (url.startsWith("blob:")) {
@@ -207,10 +208,38 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
             if (channelRef.current) {
                 channelRef.current.postMessage(cleaned);
             }
+            const now = Date.now();
+            lastSyncedRef.current = now;
+            fetch("/api/wall-state", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ images: cleaned, updatedAt: now }),
+            }).catch(() => {
+                // ignore network failure
+            });
         } catch {
             // storage write can fail; ignore
         }
     }, [images]);
+
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch("/api/wall-state", { cache: "no-store" });
+                if (!res.ok) return;
+                const data = (await res.json()) as { images?: unknown; updatedAt?: number };
+                if (typeof data.updatedAt === "number" && data.updatedAt > lastSyncedRef.current) {
+                    const cleaned = sanitizeState(data.images);
+                    setImages(cleaned);
+                    lastSyncedRef.current = data.updatedAt;
+                    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+                }
+            } catch {
+                // ignore network/poll failure
+            }
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const urls = objectUrlsRef.current;
