@@ -16,6 +16,7 @@ export default function DesignSection() {
 
     useEffect(() => {
         const nextView = viewFromPath(pathname);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveView(nextView);
     }, [pathname]);
 

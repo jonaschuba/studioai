@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
@@ -36,7 +37,7 @@ function useCanvasSize(canvasWidth: number, canvasHeight: number) {
         update();
         window.addEventListener("resize", update);
         return () => window.removeEventListener("resize", update);
-    }, [canvasWidth, canvasHeight]);
+    }, [canvasWidth, canvasHeight, ratio]);
 
     return size;
 }

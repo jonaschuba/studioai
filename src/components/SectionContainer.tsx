@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -33,50 +34,6 @@ export default function SectionContainer({
     }, [isActive]);
 
     if (!shouldRender) return null;
-
-    let transformClass = "";
-    let opacityClass = "";
-
-    switch (animationState) {
-        case "entering":
-            transformClass = "-translate-y-5";
-            opacityClass = "opacity-0";
-            break;
-        case "visible":
-            transformClass = "translate-y-0";
-            opacityClass = "opacity-100";
-            break;
-        case "exiting":
-            transformClass = "-translate-y-5";
-            opacityClass = "opacity-0";
-            break;
-        case "hidden":
-            transformClass = "-translate-y-5";
-            opacityClass = "opacity-0";
-            break;
-    }
-
-    // Override for entering state to ensure it starts from top
-    if (animationState === "entering") {
-        // Actually, for entering we want to start from top (translateY(-20px) or similar) and go to 0
-        // For exiting we want to go up (translateY(-20px))
-
-        // Let's refine the logic based on the request:
-        // Old section: translateY(-10 to -20px) and opacity -> 0
-        // New section: translateY(10 to 20px) to 0 and opacity 0 -> 1
-    }
-
-    // Let's simplify the logic with a key change detection in the parent, 
-    // but since we are wrapping each section, we need to handle enter/exit.
-
-    // Actually, the requirement says:
-    // Old section: translateY(-10 to -20px) and opacity → 0.
-    // New section: translateY(10 to 20px) to 0 and opacity from 0 → 1.
-
-    // So:
-    // Exiting: translate-y-[-20px] opacity-0
-    // Entering (initial): translate-y-[20px] opacity-0
-    // Active: translate-y-0 opacity-100
 
     const getClasses = () => {
         if (animationState === 'entering') return "translate-y-[20px] opacity-0";

@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 
 export type WallId = "W1" | "W2" | "W3" | "W4" | "W5";
 
@@ -38,16 +46,18 @@ const WallImageContext = createContext<WallImageContextValue | null>(null);
 const STORAGE_KEY = "studio3_wall_state";
 const isValidSrc = (src: unknown) => typeof src === "string" && src.length > 0;
 
+type PersistedEntry = { src?: unknown; transform?: Partial<WallTransform> };
+
 const sanitizeState = (state: unknown): WallImageState => {
     if (!state || typeof state !== "object") return {};
     const next: WallImageState = {};
+    const record = state as Partial<Record<WallId, PersistedEntry>>;
+
     (["W1", "W2", "W3", "W4", "W5"] as WallId[]).forEach((id) => {
-        // @ts-expect-error indexing unknown
-        const entry = state[id];
+        const entry = record[id];
         if (entry && typeof entry === "object" && isValidSrc(entry.src)) {
             next[id] = {
-                // @ts-expect-error read from unknown
-                src: entry.src,
+                src: entry.src as string,
                 transform: {
                     x: Number(entry.transform?.x ?? 0) || 0,
                     y: Number(entry.transform?.y ?? 0) || 0,
@@ -71,31 +81,34 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
     const objectUrlsRef = useRef<Set<string>>(new Set());
     const hasHydratedRef = useRef(false);
 
-    const trackObjectUrl = (url: string) => {
+    const trackObjectUrl = useCallback((url: string) => {
         if (url.startsWith("blob:")) {
             objectUrlsRef.current.add(url);
         }
-    };
+    }, []);
 
-    const revokeObjectUrl = (url?: string) => {
+    const revokeObjectUrl = useCallback((url?: string) => {
         if (url && objectUrlsRef.current.has(url)) {
             URL.revokeObjectURL(url);
             objectUrlsRef.current.delete(url);
         }
-    };
+    }, []);
 
-    const setImage = (wallId: WallId, src: string) => {
-        setImages((prev) => {
-            const next = { ...prev };
-            const existing = next[wallId];
-            revokeObjectUrl(existing?.src);
-            next[wallId] = { src, transform: { ...DEFAULT_TRANSFORM } };
-            trackObjectUrl(src);
-            return next;
-        });
-    };
+    const setImage = useCallback(
+        (wallId: WallId, src: string) => {
+            setImages((prev) => {
+                const next = { ...prev };
+                const existing = next[wallId];
+                revokeObjectUrl(existing?.src);
+                next[wallId] = { src, transform: { ...DEFAULT_TRANSFORM } };
+                trackObjectUrl(src);
+                return next;
+            });
+        },
+        [revokeObjectUrl, trackObjectUrl]
+    );
 
-    const updateTransform = (wallId: WallId, partial: Partial<WallTransform>) => {
+    const updateTransform = useCallback((wallId: WallId, partial: Partial<WallTransform>) => {
         setImages((prev) => {
             const existing = prev[wallId];
             if (!existing) return prev;
@@ -110,9 +123,9 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
                 },
             };
         });
-    };
+    }, []);
 
-    const resetTransform = (wallId: WallId) => {
+    const resetTransform = useCallback((wallId: WallId) => {
         setImages((prev) => {
             const existing = prev[wallId];
             if (!existing) return prev;
@@ -124,18 +137,21 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
                 },
             };
         });
-    };
+    }, []);
 
-    const clearImage = (wallId: WallId) => {
-        setImages((prev) => {
-            const next = { ...prev };
-            const existing = next[wallId];
-            if (!existing) return prev;
-            revokeObjectUrl(existing.src);
-            delete next[wallId];
-            return next;
-        });
-    };
+    const clearImage = useCallback(
+        (wallId: WallId) => {
+            setImages((prev) => {
+                const next = { ...prev };
+                const existing = next[wallId];
+                if (!existing) return prev;
+                revokeObjectUrl(existing.src);
+                delete next[wallId];
+                return next;
+            });
+        },
+        [revokeObjectUrl]
+    );
 
     useEffect(() => {
         const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
@@ -143,6 +159,7 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
             try {
                 const parsed = JSON.parse(raw) as WallImageState;
                 const cleaned = sanitizeState(parsed);
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setImages(cleaned);
             } catch {
                 // ignore invalid storage
@@ -162,15 +179,16 @@ export function WallImageProvider({ children }: { children: React.ReactNode }) {
     }, [images]);
 
     useEffect(() => {
+        const urls = objectUrlsRef.current;
         return () => {
-            objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-            objectUrlsRef.current.clear();
+            urls.forEach((url) => URL.revokeObjectURL(url));
+            urls.clear();
         };
     }, []);
 
     const value = useMemo(
         () => ({ images, setImage, updateTransform, resetTransform, clearImage }),
-        [images]
+        [images, setImage, updateTransform, resetTransform, clearImage]
     );
 
     return <WallImageContext.Provider value={value}>{children}</WallImageContext.Provider>;

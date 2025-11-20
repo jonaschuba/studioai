@@ -24,6 +24,7 @@ export default function Home() {
 
     useEffect(() => {
         if (isSectionKey(sectionParam)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setActiveSection(sectionParam.toUpperCase() as SectionKey);
         }
     }, [sectionParam]);

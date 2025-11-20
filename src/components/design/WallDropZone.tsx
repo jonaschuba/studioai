@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -40,6 +41,7 @@ export default function WallDropZone({
     }, [naturalSize, width, height]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNaturalSize(null);
     }, [imageState?.src]);
 
